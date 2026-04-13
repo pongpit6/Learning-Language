@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polyglot Coach - 1000 Words</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header id="app-header">
+        <h1>Polyglot Coach</h1>
+    </header>
+
+    <main id="app-content">
+        <section id="page-home" class="page active">
+            <div class="stats-container">
+                <h2>ความคืบหน้าของคุณ 📊</h2>
+                
+                <div class="lang-card eng-card">
+                    <div class="lang-title"><i class="fa-solid fa-earth-americas"></i> GB English</div>
+                    <div class="stat-row">
+                        <span>ศัพท์ที่ทายถูก:</span> 
+                        <span><strong id="stat-eng-words">0</strong> / 1000</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>เวลาฟัง:</span> 
+                        <strong id="stat-eng-time">0h 0m</strong>
+                    </div>
+                    <div class="progress-container">
+                        <div id="progress-eng" class="progress-bar"></div>
+                    </div>
+                </div>
+
+                <div class="lang-card jap-card">
+                    <div class="lang-title"><i class="fa-solid fa-torii-gate"></i> JP 日本語</div>
+                    <div class="stat-row">
+                        <span>ศัพท์ที่ทายถูก:</span> 
+                        <span><strong id="stat-jap-words">0</strong> / 1000</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>เวลาฟัง:</span> 
+                        <strong id="stat-jap-time">0h 0m</strong>
+                    </div>
+                    <div class="progress-container">
+                        <div id="progress-jap" class="progress-bar"></div>
+                    </div>
+                </div>
+
+                <div class="lang-card chn-card">
+                    <div class="lang-title"><i class="fa-solid fa-dragon"></i> CN 中文</div>
+                    <div class="stat-row">
+                        <span>ศัพท์ที่ทายถูก:</span> 
+                        <span><strong id="stat-chn-words">0</strong> / 1000</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>เวลาฟัง:</span> 
+                        <strong id="stat-chn-time">0h 0m</strong>
+                    </div>
+                    <div class="progress-container">
+                        <div id="progress-chn" class="progress-bar"></div>
+                    </div>
+                </div>
+
+                <div class="lang-card kor-card">
+                    <div class="lang-title"><i class="fa-solid fa-won-sign"></i> KR 한국어</div>
+                    <div class="stat-row">
+                        <span>ศัพท์ที่ทายถูก:</span> 
+                        <span><strong id="stat-kor-words">0</strong> / 1000</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>เวลาฟัง:</span> 
+                        <strong id="stat-kor-time">0h 0m</strong>
+                    </div>
+                    <div class="progress-container">
+                        <div id="progress-kor" class="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="page-quiz" class="page">
+            <div class="quiz-setup" id="quiz-setup">
+                <h2>เลือกภาษาสำหรับ Quiz 🎮</h2>
+                <div class="lang-selector">
+                    <button class="lang-btn" data-lang="ENG">GB ENG</button>
+                    <button class="lang-btn" data-lang="JAP">JP JAP</button>
+                    <button class="lang-btn" data-lang="CHN">CN CHN</button>
+                    <button class="lang-btn" data-lang="KOR">KR KOR</button>
+                    <button class="lang-btn mix-btn" data-lang="MIX">🌍 MIX (รวมทั้งหมด)</button>
+                </div>
+                <button id="start-quiz-btn" class="primary-btn" disabled>เริ่มทายศัพท์ (50 ข้อ)</button>
+            </div>
+
+            <div class="quiz-playboard hidden" id="quiz-playboard">
+                <div class="quiz-header">
+                    <span id="quiz-counter">ข้อที่ 1 / 50</span>
+                    <span id="quiz-score">คะแนน: 0</span>
+                </div>
+                
+                <div class="question-box">
+                    <h3 id="question-text">สวัสดี</h3>
+                </div>
+
+                <div class="options-container" id="options-container">
+                    </div>
+            </div>
+        </section>
+
+        <section id="page-listen" class="page">
+            <h2>โหมดฟังเสียง 🎧</h2>
+            <div class="listen-setup">
+                <select id="listen-lang-select" class="custom-select">
+                    <option value="" disabled selected>เลือกภาษา...</option>
+                    <option value="ENG">🇬🇧 English</option>
+                    <option value="JAP">🇯🇵 日本語</option>
+                    <option value="CHN">🇨🇳 中文</option>
+                    <option value="KOR">🇰🇷 한국어</option>
+                </select>
+                
+                <select id="listen-mode-select" class="custom-select">
+                    <option value="word">หมวดคำศัพท์ (Words)</option>
+                    <option value="sentence">หมวดประโยค (Sentences)</option>
+                </select>
+            </div>
+
+            <div class="listening-box">
+                <h3 id="listen-target-text">-</h3>
+                <p id="listen-reading-text">-</p>
+                <p id="listen-thai-text">เลือกภาษาและโหมดเพื่อเริ่มเล่น</p>
+            </div>
+
+            <div class="player-controls">
+                <button id="btn-prev" class="control-btn"><i class="fa-solid fa-backward-step"></i></button>
+                <button id="btn-play-pause" class="control-btn play-btn"><i class="fa-solid fa-play"></i></button>
+                <button id="btn-next" class="control-btn"><i class="fa-solid fa-forward-step"></i></button>
+            </div>
+            
+            <div class="listen-timer-display">
+                เวลาในรอบนี้: <span id="current-session-time">00:00</span>
+            </div>
+        </section>
+
+    </main>
+
+    <nav id="bottom-nav">
+        <a href="#" class="nav-item active" data-target="page-home">
+            <i class="fa-solid fa-chart-simple"></i>
+            <span>สถิติ</span>
+        </a>
+        <a href="#" class="nav-item" data-target="page-quiz">
+            <i class="fa-solid fa-gamepad"></i>
+            <span>ควิซ</span>
+        </a>
+        <a href="#" class="nav-item" data-target="page-listen">
+            <i class="fa-solid fa-headphones"></i>
+            <span>ฟัง</span>
+        </a>
+    </nav>
+
+    <script src="words_en.js"></script>
+    <script src="words_jp.js"></script>
+    <script src="words_cn.js"></script>
+    <script src="words_kr.js"></script>
+    
+    <script src="vocab_en.js"></script>
+    <script src="vocab_ja.js"></script>
+    <script src="vocab_zh.js"></script>
+    <script src="vocab_ko.js"></script>
+    
+    <script src="script.js"></script>
+</body>
+</html>
