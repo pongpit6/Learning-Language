@@ -111,21 +111,37 @@ function updateHomeUI() {
         const m = Math.floor((stats.timeSec % 3600) / 60);
         if (timeEl) timeEl.innerText = `${h}h ${m}m`;
 
-        // อัปเดตแถบ Progress (อิงเป้าหมายที่ 1000 คำ)
+        // อัปเดตแถบ Progress (อิงเป้าหมายที่ 1000 คำ = 10,000 EXP โดยประมาณ)
         const progressEl = document.getElementById(`progress-${lang.toLowerCase()}`);
         if (progressEl) {
             let percent = (stats.words / 1000) * 100;
             progressEl.style.width = `${Math.min(percent, 100)}%`;
         }
 
-        // วิวัฒนาการสัตว์เลี้ยง
+        // วิวัฒนาการสัตว์เลี้ยง + ยิงพลุฉลอง
         const petAvatar = document.getElementById(`pet-avatar-${lang.toLowerCase()}`);
         const petName = document.getElementById(`pet-name-${lang.toLowerCase()}`);
         if (petAvatar && petName) {
             let currentStage = petStages[lang][0];
+            let previousStageName = petName.innerText; // เก็บชื่อร่างเดิมไว้เช็คการอัปเวล
+
             petStages[lang].forEach(s => { if (exp >= s.exp) currentStage = s; });
+            
             petAvatar.innerText = currentStage.icon;
             petName.innerText = currentStage.name;
+
+            // เอฟเฟกต์ฉลองถ้าร่างเปลี่ยน (และไม่ใช่สถานะกำลังโหลดแอปครั้งแรก)
+            if (previousStageName !== "กำลังฟัก..." && previousStageName !== currentStage.name) {
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 150,
+                        spread: 80,
+                        origin: { y: 0.6 },
+                        colors: ['#6366f1', '#a855f7', '#3b82f6', '#22c55e'],
+                        zIndex: 10000
+                    });
+                }
+            }
         }
     });
 
@@ -154,7 +170,7 @@ navItems.forEach(item => {
 });
 
 // ==========================================================================
-// 5. ระบบควิซ 50 ข้อ + อัลกอริทึม SRS (Spaced Repetition System)
+// 5. ระบบควิซ 50 ข้อ + อัลกอริทึม SRS + เอฟเฟกต์ Game Feel
 // ==========================================================================
 let quizLang = null;
 let currentQuizWords = [];
@@ -196,9 +212,7 @@ startQuizBtn.addEventListener('click', () => {
     if (pool.length === 0) { alert('ไม่พบคำศัพท์!'); return; }
 
     // --- อัลกอริทึม SRS ---
-    // จัดเรียงคำศัพท์: เอาคำที่ Mastery น้อย (ทายผิด/ไม่เคยเจอ) มาไว้หน้าสุด
     pool.sort((a, b) => {
-        // หาว่าคำนี้อยู่ภาษาไหน เพื่อไปดึง mastery
         let langA = getLangKeyFromLocale(a.lang);
         let langB = getLangKeyFromLocale(b.lang);
         let scoreA = userStats[langA].mastery[a.target] || 0;
@@ -206,11 +220,10 @@ startQuizBtn.addEventListener('click', () => {
         return scoreA - scoreB;
     });
 
-    // ดึงกลุ่มคำที่ห่วยที่สุด 100 คำแรก มาสับไพ่ แล้วค่อยเลือกมาเล่น 50 ข้อ
     let focusPool = pool.slice(0, 100);
     shuffle(focusPool);
     
-    currentQuizWords = focusPool.slice(0, 50); // เล่นทีละ 50 ข้อตามโครงสร้างผู้ใช้
+    currentQuizWords = focusPool.slice(0, 50); 
     currentQuestionIndex = 0;
     quizScore = 0;
     
@@ -257,6 +270,25 @@ function loadQuestion() {
     });
 }
 
+// ----------------------------------------------------
+// ฟังก์ชันเสริม: สร้างตัวเลขลอย (Floating EXP)
+// ----------------------------------------------------
+function showFloatingExp(element, amount) {
+    const rect = element.getBoundingClientRect();
+    const floatEl = document.createElement('div');
+    floatEl.className = 'floating-exp';
+    floatEl.innerText = `+${amount} EXP`;
+    
+    // ตั้งค่าให้อยู่ตรงกลางปุ่มที่กด
+    floatEl.style.left = `${rect.left + (rect.width / 2) - 35}px`;
+    floatEl.style.top = `${rect.top}px`;
+    document.body.appendChild(floatEl);
+    
+    // ลบออกจาก DOM หลังแอนิเมชันจบ (1 วิ)
+    setTimeout(() => floatEl.remove(), 1000);
+}
+// ----------------------------------------------------
+
 function checkAnswer(selected, correct, clickedBtn, container) {
     let langKey = getLangKeyFromLocale(correct.lang);
     if (!userStats[langKey].mastery[correct.target]) userStats[langKey].mastery[correct.target] = 0;
@@ -265,18 +297,28 @@ function checkAnswer(selected, correct, clickedBtn, container) {
     allBtns.forEach(b => b.disabled = true);
 
     if (selected.target === correct.target) {
-        // ทายถูก
+        // --- ทายถูก ---
         quizScore++;
         userStats[langKey].words++;
-        userStats[langKey].mastery[correct.target] += 1; // เพิ่ม Mastery
+        userStats[langKey].mastery[correct.target] += 1; 
+        
         clickedBtn.style.borderColor = "#22c55e";
         clickedBtn.style.backgroundColor = "#dcfce7";
+        
+        // แสดกตัวเลขลอย +10 EXP
+        showFloatingExp(clickedBtn, 10);
+        
     } else {
-        // ทายผิด
-        userStats[langKey].mastery[correct.target] -= 1; // ลด Mastery
+        // --- ทายผิด ---
+        userStats[langKey].mastery[correct.target] -= 1; 
+        
         clickedBtn.style.borderColor = "#ef4444";
         clickedBtn.style.backgroundColor = "#fee2e2";
-        // เฉลยข้อถูก
+        
+        // สั่งให้ปุ่มสั่น
+        clickedBtn.classList.add('shake-anim');
+        
+        // เฉลยข้อถูกให้เห็น
         allBtns.forEach(b => {
             if (b.innerHTML.includes(correct.target)) {
                 b.style.borderColor = "#22c55e";
@@ -284,8 +326,9 @@ function checkAnswer(selected, correct, clickedBtn, container) {
             }
         });
     }
+    
     saveStats();
-    setTimeout(() => { currentQuestionIndex++; loadQuestion(); }, 1000);
+    setTimeout(() => { currentQuestionIndex++; loadQuestion(); }, 1200); // หน่วงเวลาเพิ่มนิดนึงให้ดูเอฟเฟกต์ทัน
 }
 
 function endQuiz() {
