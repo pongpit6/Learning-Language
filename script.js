@@ -1,7 +1,6 @@
 // ==========================================================================
-// 1. การตั้งค่าและจัดการข้อมูล (Data & Configuration)
+// 1. นำเข้าและจัดการข้อมูล Data Sources
 // ==========================================================================
-
 const allDictionaries = {
     ENG: typeof wordsEN !== 'undefined' ? wordsEN : [],
     JAP: typeof wordsJP !== 'undefined' ? wordsJP : [],
@@ -9,7 +8,6 @@ const allDictionaries = {
     KOR: typeof wordsKR !== 'undefined' ? wordsKR : []
 };
 
-// ดึงข้อมูลประโยค (รองรับชื่อตัวแปรหลายรูปแบบกันพลาด)
 const allSentences = {
     ENG: typeof vocabEN !== 'undefined' ? vocabEN : [],
     JAP: typeof vocabJA !== 'undefined' ? vocabJA : (typeof vocabJP !== 'undefined' ? vocabJP : []),
@@ -17,64 +15,127 @@ const allSentences = {
     KOR: typeof vocabKO !== 'undefined' ? vocabKO : (typeof vocabKR !== 'undefined' ? vocabKR : [])
 };
 
+// ==========================================================================
+// 2. State & LocalStorage + Pet Config
+// ==========================================================================
 let userStats = {
-    ENG: { words: 0, timeSec: 0 },
-    JAP: { words: 0, timeSec: 0 },
-    CHN: { words: 0, timeSec: 0 },
-    KOR: { words: 0, timeSec: 0 }
+    ENG: { words: 0, timeSec: 0, mastery: {} },
+    JAP: { words: 0, timeSec: 0, mastery: {} },
+    CHN: { words: 0, timeSec: 0, mastery: {} },
+    KOR: { words: 0, timeSec: 0, mastery: {} },
+    lastActive: null,
+    streak: 0
 };
 
-// ==========================================================================
-// 2. ระบบ LocalStorage และการอัปเดตหน้าแรก (Stats + Progress Bar)
-// ==========================================================================
+// สัตว์เลี้ยง 4 สัญชาติ
+const petStages = {
+    ENG: [
+        { exp: 0, icon: "🥚", name: "ไข่ (Lv.1)" },
+        { exp: 100, icon: "🐥", name: "ลูกเจี๊ยบ (Lv.2)" },
+        { exp: 500, icon: "🦉", name: "นกฮูกนักปราชญ์ (Lv.3)" },
+        { exp: 1500, icon: "🦅", name: "พญาอินทรี (Max)" }
+    ],
+    JAP: [
+        { exp: 0, icon: "🥚", name: "ไข่ (Lv.1)" },
+        { exp: 100, icon: "🍡", name: "ดังโงะ (Lv.2)" },
+        { exp: 500, icon: "🦊", name: "จิ้งจอกอินาริ (Lv.3)" },
+        { exp: 1500, icon: "🐉", name: "มังกรเซียน (Max)" }
+    ],
+    CHN: [
+        { exp: 0, icon: "🥚", name: "ไข่ (Lv.1)" },
+        { exp: 100, icon: "🥟", name: "ติ่มซำ (Lv.2)" },
+        { exp: 500, icon: "🐼", name: "แพนด้า (Lv.3)" },
+        { exp: 1500, icon: "🐲", name: "กิเลนทองคำ (Max)" }
+    ],
+    KOR: [
+        { exp: 0, icon: "🥚", name: "ไข่ (Lv.1)" },
+        { exp: 100, icon: "🐾", name: "ลูกหมี (Lv.2)" },
+        { exp: 500, icon: "🐯", name: "เสือโคร่ง (Lv.3)" },
+        { exp: 1500, icon: "🦁", name: "แฮแทศักดิ์สิทธิ์ (Max)" }
+    ]
+};
 
 function loadStats() {
-    const saved = localStorage.getItem('polyglotStats');
+    const saved = localStorage.getItem('polyglotCoachData');
     if (saved) {
-        userStats = JSON.parse(saved);
+        let parsed = JSON.parse(saved);
+        // ตรวจสอบความสมบูรณ์ของโครงสร้างข้อมูลเดิม
+        ['ENG','JAP','CHN','KOR'].forEach(l => {
+            if (!parsed[l]) parsed[l] = { words: 0, timeSec: 0, mastery: {} };
+            if (!parsed[l].mastery) parsed[l].mastery = {};
+        });
+        userStats = parsed;
     }
+    checkStreak();
     updateHomeUI();
 }
 
 function saveStats() {
-    localStorage.setItem('polyglotStats', JSON.stringify(userStats));
+    localStorage.setItem('polyglotCoachData', JSON.stringify(userStats));
     updateHomeUI();
 }
 
-function formatTime(totalSeconds) {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
+function checkStreak() {
+    const today = new Date().toDateString();
+    if (userStats.lastActive !== today) {
+        if (userStats.lastActive) {
+            const lastDate = new Date(userStats.lastActive);
+            const diff = (new Date() - lastDate) / (1000 * 60 * 60 * 24);
+            if (diff <= 1.5) userStats.streak++;
+            else userStats.streak = 1;
+        } else {
+            userStats.streak = 1;
+        }
+        userStats.lastActive = today;
+        saveStats();
+    }
 }
 
+// ==========================================================================
+// 3. UI อัปเดตหน้าแรก (คำนวณ EXP และวิวัฒนาการสัตว์เลี้ยง)
+// ==========================================================================
 function updateHomeUI() {
     const langs = ['ENG', 'JAP', 'CHN', 'KOR'];
-    const maxWords = 1000;
-
+    
     langs.forEach(lang => {
-        const currentWords = userStats[lang].words;
+        const stats = userStats[lang];
+        // 1 ทายถูก = 10 EXP, ฟัง 1 นาที = 5 EXP
+        const exp = (stats.words * 10) + (Math.floor(stats.timeSec / 60) * 5);
         
-        // อัปเดตตัวหนังสือ
+        // อัปเดตตัวเลข
         const wordEl = document.getElementById(`stat-${lang.toLowerCase()}-words`);
-        if (wordEl) wordEl.innerText = currentWords;
+        if (wordEl) wordEl.innerText = stats.words;
         
         const timeEl = document.getElementById(`stat-${lang.toLowerCase()}-time`);
-        if (timeEl) timeEl.innerText = formatTime(userStats[lang].timeSec);
+        const h = Math.floor(stats.timeSec / 3600);
+        const m = Math.floor((stats.timeSec % 3600) / 60);
+        if (timeEl) timeEl.innerText = `${h}h ${m}m`;
 
-        // อัปเดต Progress Bar
+        // อัปเดตแถบ Progress (อิงเป้าหมายที่ 1000 คำ)
         const progressEl = document.getElementById(`progress-${lang.toLowerCase()}`);
         if (progressEl) {
-            let percent = (currentWords / maxWords) * 100;
-            if (percent > 100) percent = 100;
-            progressEl.style.width = `${percent}%`;
+            let percent = (stats.words / 1000) * 100;
+            progressEl.style.width = `${Math.min(percent, 100)}%`;
+        }
+
+        // วิวัฒนาการสัตว์เลี้ยง
+        const petAvatar = document.getElementById(`pet-avatar-${lang.toLowerCase()}`);
+        const petName = document.getElementById(`pet-name-${lang.toLowerCase()}`);
+        if (petAvatar && petName) {
+            let currentStage = petStages[lang][0];
+            petStages[lang].forEach(s => { if (exp >= s.exp) currentStage = s; });
+            petAvatar.innerText = currentStage.icon;
+            petName.innerText = currentStage.name;
         }
     });
+
+    const streakEl = document.getElementById('streak-count');
+    if (streakEl) streakEl.innerText = userStats.streak;
 }
 
 // ==========================================================================
-// 3. ระบบนำทาง (Navigation)
+// 4. ระบบนำทาง (Navigation)
 // ==========================================================================
-
 const navItems = document.querySelectorAll('.nav-item');
 const pages = document.querySelectorAll('.page');
 
@@ -88,16 +149,13 @@ navItems.forEach(item => {
         const targetPage = item.getAttribute('data-target');
         document.getElementById(targetPage).classList.add('active');
 
-        if (targetPage !== 'page-listen') {
-            pauseListening();
-        }
+        if (targetPage !== 'page-listen') pauseListening();
     });
 });
 
 // ==========================================================================
-// 4. ระบบทายคำศัพท์ (Quiz Mode)
+// 5. ระบบควิซ 50 ข้อ + อัลกอริทึม SRS (Spaced Repetition System)
 // ==========================================================================
-
 let quizLang = null;
 let currentQuizWords = [];
 let currentQuestionIndex = 0;
@@ -118,11 +176,9 @@ langBtns.forEach(btn => {
 });
 
 function shuffle(array) {
-    let currentIndex = array.length, randomIndex;
-    while (currentIndex != 0) {
-        randomIndex = Math.floor(Math.random() * currentIndex);
-        currentIndex--;
-        [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
 }
@@ -137,27 +193,41 @@ startQuizBtn.addEventListener('click', () => {
         pool = [...allDictionaries[quizLang]];
     }
 
-    if (pool.length === 0) {
-        alert('ไม่พบคำศัพท์ กรุณาตรวจสอบไฟล์ข้อมูล!');
-        return;
-    }
+    if (pool.length === 0) { alert('ไม่พบคำศัพท์!'); return; }
 
-    shuffle(pool);
-    currentQuizWords = pool.slice(0, 50); // สุ่มมา 50 คำ
+    // --- อัลกอริทึม SRS ---
+    // จัดเรียงคำศัพท์: เอาคำที่ Mastery น้อย (ทายผิด/ไม่เคยเจอ) มาไว้หน้าสุด
+    pool.sort((a, b) => {
+        // หาว่าคำนี้อยู่ภาษาไหน เพื่อไปดึง mastery
+        let langA = getLangKeyFromLocale(a.lang);
+        let langB = getLangKeyFromLocale(b.lang);
+        let scoreA = userStats[langA].mastery[a.target] || 0;
+        let scoreB = userStats[langB].mastery[b.target] || 0;
+        return scoreA - scoreB;
+    });
+
+    // ดึงกลุ่มคำที่ห่วยที่สุด 100 คำแรก มาสับไพ่ แล้วค่อยเลือกมาเล่น 50 ข้อ
+    let focusPool = pool.slice(0, 100);
+    shuffle(focusPool);
+    
+    currentQuizWords = focusPool.slice(0, 50); // เล่นทีละ 50 ข้อตามโครงสร้างผู้ใช้
     currentQuestionIndex = 0;
     quizScore = 0;
     
     quizSetup.classList.add('hidden');
     quizPlayboard.classList.remove('hidden');
-    
     loadQuestion();
 });
 
+function getLangKeyFromLocale(locale) {
+    if (locale === 'ja-JP') return 'JAP';
+    if (locale === 'zh-CN') return 'CHN';
+    if (locale === 'ko-KR') return 'KOR';
+    return 'ENG';
+}
+
 function loadQuestion() {
-    if (currentQuestionIndex >= currentQuizWords.length) {
-        endQuiz();
-        return;
-    }
+    if (currentQuestionIndex >= currentQuizWords.length) { endQuiz(); return; }
 
     const currentWord = currentQuizWords[currentQuestionIndex];
     document.getElementById('quiz-counter').innerText = `ข้อที่ ${currentQuestionIndex + 1} / ${currentQuizWords.length}`;
@@ -171,11 +241,8 @@ function loadQuestion() {
 
     while (options.length < 4) {
         let randomWrong = pool[Math.floor(Math.random() * pool.length)];
-        if (!options.some(opt => opt.target === randomWrong.target)) {
-            options.push(randomWrong);
-        }
+        if (!options.some(opt => opt.target === randomWrong.target)) options.push(randomWrong);
     }
-
     shuffle(options);
     
     const optionsContainer = document.getElementById('options-container');
@@ -184,31 +251,41 @@ function loadQuestion() {
     options.forEach(opt => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
-        btn.innerHTML = `
-            <span class="target-word">${opt.target}</span>
-            <span class="reading-word">(${opt.reading})</span>
-        `;
-        btn.onclick = () => checkAnswer(opt, currentWord);
+        btn.innerHTML = `<span class="target-word">${opt.target}</span><span class="reading-word">(${opt.reading})</span>`;
+        btn.onclick = () => checkAnswer(opt, currentWord, btn, optionsContainer);
         optionsContainer.appendChild(btn);
     });
 }
 
-function checkAnswer(selected, correct) {
+function checkAnswer(selected, correct, clickedBtn, container) {
+    let langKey = getLangKeyFromLocale(correct.lang);
+    if (!userStats[langKey].mastery[correct.target]) userStats[langKey].mastery[correct.target] = 0;
+
+    const allBtns = container.querySelectorAll('.option-btn');
+    allBtns.forEach(b => b.disabled = true);
+
     if (selected.target === correct.target) {
+        // ทายถูก
         quizScore++;
-        let langKey = 'ENG';
-        if (correct.lang === 'ja-JP') langKey = 'JAP';
-        if (correct.lang === 'zh-CN') langKey = 'CHN';
-        if (correct.lang === 'ko-KR') langKey = 'KOR';
-        
         userStats[langKey].words++;
-        saveStats();
+        userStats[langKey].mastery[correct.target] += 1; // เพิ่ม Mastery
+        clickedBtn.style.borderColor = "#22c55e";
+        clickedBtn.style.backgroundColor = "#dcfce7";
+    } else {
+        // ทายผิด
+        userStats[langKey].mastery[correct.target] -= 1; // ลด Mastery
+        clickedBtn.style.borderColor = "#ef4444";
+        clickedBtn.style.backgroundColor = "#fee2e2";
+        // เฉลยข้อถูก
+        allBtns.forEach(b => {
+            if (b.innerHTML.includes(correct.target)) {
+                b.style.borderColor = "#22c55e";
+                b.style.backgroundColor = "#dcfce7";
+            }
+        });
     }
-    
-    setTimeout(() => {
-        currentQuestionIndex++;
-        loadQuestion();
-    }, 200);
+    saveStats();
+    setTimeout(() => { currentQuestionIndex++; loadQuestion(); }, 1000);
 }
 
 function endQuiz() {
@@ -219,20 +296,19 @@ function endQuiz() {
 }
 
 // ==========================================================================
-// 5. ระบบฟังเสียง (Listening Mode) - แก้ไขบั๊กประโยคเรียบร้อย
+// 6. ระบบฟังเสียง (Listening Mode)
 // ==========================================================================
-
 let listenPool = [];
 let listenIndex = 0;
 let isPlaying = false;
 let listenTimer = null;
 let currentSessionSec = 0;
 let listenLangKey = null;
-let listenMode = 'word'; // ค่าเริ่มต้นคือหมวดคำศัพท์
+let listenMode = 'word';
 
 const synth = window.speechSynthesis;
 const listenLangSelect = document.getElementById('listen-lang-select');
-const listenModeSelect = document.getElementById('listen-mode-select'); // ตัวแปรที่หายไป!
+const listenModeSelect = document.getElementById('listen-mode-select');
 const listenTargetText = document.getElementById('listen-target-text');
 const listenReadingText = document.getElementById('listen-reading-text');
 const listenThaiText = document.getElementById('listen-thai-text');
@@ -241,36 +317,18 @@ const btnNext = document.getElementById('btn-next');
 const btnPrev = document.getElementById('btn-prev');
 const currentSessionTimeDisplay = document.getElementById('current-session-time');
 
-// อัปเดตเมื่อเปลี่ยนภาษา
-listenLangSelect.addEventListener('change', (e) => {
-    listenLangKey = e.target.value;
-    updateListenPool();
-});
+listenLangSelect.addEventListener('change', (e) => { listenLangKey = e.target.value; updateListenPool(); });
+listenModeSelect.addEventListener('change', (e) => { listenMode = e.target.value; if (listenLangKey) updateListenPool(); });
 
-// อัปเดตเมื่อเปลี่ยนโหมด (คำศัพท์ / ประโยค)
-listenModeSelect.addEventListener('change', (e) => {
-    listenMode = e.target.value;
-    if (listenLangKey) {
-        updateListenPool();
-    }
-});
-
-// ฟังก์ชันโหลดข้อมูลใหม่ตามภาษาและโหมด
 function updateListenPool() {
     if (!listenLangKey) return;
-
-    if (listenMode === 'word') {
-        listenPool = [...allDictionaries[listenLangKey]];
-    } else {
-        listenPool = [...allSentences[listenLangKey]];
-    }
-
+    listenPool = listenMode === 'word' ? [...allDictionaries[listenLangKey]] : [...allSentences[listenLangKey]];
+    
     if (listenPool.length === 0) {
-        alert(`ไม่มีข้อมูล${listenMode === 'word' ? 'คำศัพท์' : 'ประโยค'} สำหรับภาษานี้ครับ`);
-        listenTargetText.innerText = "ไม่พบข้อมูล";
+        alert("ไม่พบข้อมูล");
+        listenTargetText.innerText = "-";
         return;
     }
-
     shuffle(listenPool); 
     listenIndex = 0;
     pauseListening();
@@ -279,17 +337,14 @@ function updateListenPool() {
 
 function updateListenUI() {
     if (listenPool.length === 0) return;
-    
     const currentWord = listenPool[listenIndex];
     listenTargetText.innerText = currentWord.target;
     listenReadingText.innerText = `(${currentWord.reading})`;
     listenThaiText.innerText = currentWord.thai;
 }
 
-// ฟังก์ชันอ่านแปลไทย
 function speakCurrentWord() {
     if (listenPool.length === 0) return;
-    
     const currentWord = listenPool[listenIndex];
     
     const utteranceTarget = new SpeechSynthesisUtterance(currentWord.target);
@@ -301,19 +356,10 @@ function speakCurrentWord() {
     utteranceThai.rate = 0.95; 
     
     utteranceTarget.onend = () => {
-        if (isPlaying) {
-            setTimeout(() => {
-                if (isPlaying) synth.speak(utteranceThai);
-            }, 500); 
-        }
+        if (isPlaying) setTimeout(() => { if (isPlaying) synth.speak(utteranceThai); }, 500); 
     };
-
     utteranceThai.onend = () => {
-        if (isPlaying) {
-            setTimeout(() => {
-                if (isPlaying) nextListen();
-            }, 1500); 
-        }
+        if (isPlaying) setTimeout(() => { if (isPlaying) nextListen(); }, 1500); 
     };
 
     synth.cancel(); 
@@ -321,15 +367,9 @@ function speakCurrentWord() {
 }
 
 function togglePlay() {
-    if (!listenLangKey) {
-        alert("กรุณาเลือกภาษาก่อนครับ!");
-        return;
-    }
-    if (listenPool.length === 0) return;
-
-    if (isPlaying) {
-        pauseListening();
-    } else {
+    if (!listenLangKey || listenPool.length === 0) { alert("กรุณาเลือกภาษาและโหมดที่มีข้อมูลครับ"); return; }
+    if (isPlaying) pauseListening();
+    else {
         isPlaying = true;
         btnPlayPause.innerHTML = '<i class="fa-solid fa-pause"></i>';
         startTimer();
@@ -347,10 +387,7 @@ function pauseListening() {
 function nextListen() {
     if (listenPool.length === 0) return;
     listenIndex++;
-    if (listenIndex >= listenPool.length) {
-        listenIndex = 0; 
-        shuffle(listenPool); 
-    }
+    if (listenIndex >= listenPool.length) { listenIndex = 0; shuffle(listenPool); }
     updateListenUI();
     if (isPlaying) speakCurrentWord();
 }
@@ -367,7 +404,6 @@ btnPlayPause.addEventListener('click', togglePlay);
 btnNext.addEventListener('click', nextListen);
 btnPrev.addEventListener('click', prevListen);
 
-// ระบบจับเวลา
 function startTimer() {
     if (listenTimer) clearInterval(listenTimer);
     listenTimer = setInterval(() => {
@@ -383,19 +419,13 @@ function startTimer() {
 }
 
 function stopTimer() {
-    if (listenTimer) {
-        clearInterval(listenTimer);
-        listenTimer = null;
-        saveStats(); 
-    }
+    if (listenTimer) { clearInterval(listenTimer); listenTimer = null; saveStats(); }
 }
 
 // ==========================================================================
-// 6. การเริ่มทำงาน (Initialization)
+// 7. Initialization
 // ==========================================================================
 window.onload = () => {
     loadStats();
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-        speechSynthesis.onvoiceschanged = () => synth.getVoices();
-    }
+    if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = () => synth.getVoices();
 };
