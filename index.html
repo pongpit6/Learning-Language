@@ -17,9 +17,18 @@
     <main id="app-content">
         <section id="page-home" class="page active">
             <div class="stats-container">
-                <h2>ความคืบหน้าของคุณ 📊</h2>
+                <div class="home-header">
+                    <h2>ความคืบหน้าของคุณ 📊</h2>
+                    <div class="streak-badge">
+                        <i class="fa-solid fa-fire"></i> Streak: <span id="streak-count">0</span> วัน
+                    </div>
+                </div>
                 
                 <div class="lang-card eng-card">
+                    <div class="pet-area">
+                        <div id="pet-avatar-eng" class="pet-icon">🥚</div>
+                        <div id="pet-name-eng" class="pet-name">กำลังฟัก...</div>
+                    </div>
                     <div class="lang-title"><i class="fa-solid fa-earth-americas"></i> GB English</div>
                     <div class="stat-row">
                         <span>ศัพท์ที่ทายถูก:</span> 
@@ -35,6 +44,10 @@
                 </div>
 
                 <div class="lang-card jap-card">
+                    <div class="pet-area">
+                        <div id="pet-avatar-jap" class="pet-icon">🥚</div>
+                        <div id="pet-name-jap" class="pet-name">กำลังฟัก...</div>
+                    </div>
                     <div class="lang-title"><i class="fa-solid fa-torii-gate"></i> JP 日本語</div>
                     <div class="stat-row">
                         <span>ศัพท์ที่ทายถูก:</span> 
@@ -50,6 +63,10 @@
                 </div>
 
                 <div class="lang-card chn-card">
+                    <div class="pet-area">
+                        <div id="pet-avatar-chn" class="pet-icon">🥚</div>
+                        <div id="pet-name-chn" class="pet-name">กำลังฟัก...</div>
+                    </div>
                     <div class="lang-title"><i class="fa-solid fa-dragon"></i> CN 中文</div>
                     <div class="stat-row">
                         <span>ศัพท์ที่ทายถูก:</span> 
@@ -65,6 +82,10 @@
                 </div>
 
                 <div class="lang-card kor-card">
+                    <div class="pet-area">
+                        <div id="pet-avatar-kor" class="pet-icon">🥚</div>
+                        <div id="pet-name-kor" class="pet-name">กำลังฟัก...</div>
+                    </div>
                     <div class="lang-title"><i class="fa-solid fa-won-sign"></i> KR 한국어</div>
                     <div class="stat-row">
                         <span>ศัพท์ที่ทายถูก:</span> 
@@ -85,10 +106,10 @@
             <div class="quiz-setup" id="quiz-setup">
                 <h2>เลือกภาษาสำหรับ Quiz 🎮</h2>
                 <div class="lang-selector">
-                    <button class="lang-btn" data-lang="ENG">GB ENG</button>
-                    <button class="lang-btn" data-lang="JAP">JP JAP</button>
-                    <button class="lang-btn" data-lang="CHN">CN CHN</button>
-                    <button class="lang-btn" data-lang="KOR">KR KOR</button>
+                    <button class="lang-btn" data-lang="ENG">🇬🇧 ENG</button>
+                    <button class="lang-btn" data-lang="JAP">🇯🇵 JAP</button>
+                    <button class="lang-btn" data-lang="CHN">🇨🇳 CHN</button>
+                    <button class="lang-btn" data-lang="KOR">🇰🇷 KOR</button>
                     <button class="lang-btn mix-btn" data-lang="MIX">🌍 MIX (รวมทั้งหมด)</button>
                 </div>
                 <button id="start-quiz-btn" class="primary-btn" disabled>เริ่มทายศัพท์ (50 ข้อ)</button>
@@ -129,7 +150,7 @@
             <div class="listening-box">
                 <h3 id="listen-target-text">-</h3>
                 <p id="listen-reading-text">-</p>
-                <p id="listen-thai-text">เลือกภาษาและโหมดเพื่อเริ่มเล่น</p>
+                <p id="listen-thai-text" class="listen-thai">เลือกภาษาและโหมดเพื่อเริ่มเล่น</p>
             </div>
 
             <div class="player-controls">
@@ -142,7 +163,6 @@
                 เวลาในรอบนี้: <span id="current-session-time">00:00</span>
             </div>
         </section>
-
     </main>
 
     <nav id="bottom-nav">
